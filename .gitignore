@@ -3,3 +3,6 @@
 
 # build folder
 /_out
+
+# certificates
+*.pem
