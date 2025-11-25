@@ -1,6 +1,7 @@
 package printer
 
 import (
+	"crypto/tls"
 	"net/http"
 	"net/http/cookiejar"
 	"time"
@@ -15,22 +16,24 @@ type printer struct {
 // PrinterConfig contains the information necessary to create a printer
 // type which interfaces with a remote Brother printer
 type Config struct {
-	Hostname  string
-	Password  string
-	UserAgent string
-	UseHttp   bool
+	Hostname           string
+	Password           string
+	UserAgent          string
+	UseHttp            bool
+	InsecureSkipVerify bool
 }
 
 // custom transport to add User-Agent
 type printerTransport struct {
 	userAgent string
+	base      http.RoundTripper
 }
 
 func (trans *printerTransport) RoundTrip(req *http.Request) (*http.Response, error) {
 	// always set user-agent
 	req.Header.Set("User-Agent", trans.userAgent)
 
-	return http.DefaultTransport.RoundTrip(req)
+	return trans.base.RoundTrip(req)
 }
 
 // NewPrinter creates a new printer from a PrinterConfig
@@ -47,6 +50,12 @@ func NewPrinter(cfg Config) (*printer, error) {
 		return nil, err
 	}
 
+	// clone default transport to inject TLS settings
+	clonedTransport := http.DefaultTransport.(*http.Transport).Clone()
+	clonedTransport.TLSClientConfig = &tls.Config{
+		InsecureSkipVerify: cfg.InsecureSkipVerify,
+	}
+
 	p := &printer{
 		httpClient: &http.Client{
 			// disable redirect (POSTs return 301 and if client follows it loses the post response)
@@ -59,6 +68,7 @@ func NewPrinter(cfg Config) (*printer, error) {
 			Timeout: 30 * time.Second,
 			Transport: &printerTransport{
 				userAgent: cfg.UserAgent,
+				base:      clonedTransport,
 			},
 		},
 		baseUrl: baseUrl,

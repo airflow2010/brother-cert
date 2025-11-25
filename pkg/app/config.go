@@ -28,7 +28,8 @@ type config struct {
 	hostname *string
 	password *string
 	keyCertPemCfg
-	http *bool
+	http               *bool
+	insecureSkipVerify *bool
 }
 
 // getConfig returns the app's configuration from either command line args,
@@ -47,6 +48,7 @@ func (app *app) getConfig() error {
 	cfg.keyPem = rootFlags.StringLong("keypem", "", "string of the rsa-2048 key in pem format")
 	cfg.certPem = rootFlags.StringLong("certpem", "", "string of the certificate in pem format")
 	cfg.http = rootFlags.BoolLong("http", "if this flag is set the connection to the printer will use http instead of https (INSECURE)")
+	cfg.insecureSkipVerify = rootFlags.BoolLong("insecure-skip-verify", "skip TLS certificate verification when connecting to the printer (INSECURE)")
 
 	rootCmd := &ff.Command{
 		Name:      "brother-cert",

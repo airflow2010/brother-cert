@@ -45,10 +45,11 @@ func (app *app) cmdInstallCertAndReset(_ context.Context, args []string) error {
 
 	// make printer (which includes login)
 	printerCfg := printer.Config{
-		Hostname:  *app.config.hostname,
-		Password:  *app.config.password,
-		UseHttp:   useHttp,
-		UserAgent: fmt.Sprintf("brother-cert/%s (%s; %s)", appVersion, runtime.GOOS, runtime.GOARCH),
+		Hostname:           *app.config.hostname,
+		Password:           *app.config.password,
+		UseHttp:            useHttp,
+		InsecureSkipVerify: app.config.insecureSkipVerify != nil && *app.config.insecureSkipVerify,
+		UserAgent:          fmt.Sprintf("brother-cert/%s (%s; %s)", appVersion, runtime.GOOS, runtime.GOARCH),
 	}
 
 	print, err := printer.NewPrinter(printerCfg)
