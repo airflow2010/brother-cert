@@ -5,10 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -138,9 +136,6 @@ func (p *printer) DeleteCert(id string) error {
 	if err != nil {
 		return err
 	}
-	_ = os.WriteFile("/tmp/cert_delete_get.html", bodyBytes, 0o600)
-	log.Printf("cert delete GET status=%d body_len=%d saved=/tmp/cert_delete_get.html", resp.StatusCode, len(bodyBytes))
-
 	// OK status?
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("printer: get of delete page failed (status code %d)", resp.StatusCode)
@@ -202,9 +197,6 @@ func (p *printer) DeleteCert(id string) error {
 	if err != nil {
 		return err
 	}
-	_ = os.WriteFile("/tmp/cert_delete_post1.html", bodyBytes, 0o600)
-	log.Printf("cert delete POST1 status=%d body_len=%d saved=/tmp/cert_delete_post1.html", resp.StatusCode, len(bodyBytes))
-
 	// OK status?
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("printer: get failed (status code %d)", resp.StatusCode)
@@ -262,8 +254,6 @@ func (p *printer) DeleteCert(id string) error {
 
 	// read and discard entire body
 	bodyBytes, _ = io.ReadAll(resp.Body)
-	_ = os.WriteFile("/tmp/cert_delete_post2.html", bodyBytes, 0o600)
-	log.Printf("cert delete POST2 status=%d body_len=%d saved=/tmp/cert_delete_post2.html", resp.StatusCode, len(bodyBytes))
 
 	// normally the webUI would show a waiting screen for ~7 seconds. insert
 	// a delay here to account for any processing the device might do

@@ -6,11 +6,9 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"net/url"
-	"os"
 	"strings"
 	"time"
 )
@@ -18,43 +16,6 @@ import (
 const urlCertImport = "/net/security/certificate/import.html"
 const urlCertImportWait = "/net/security/certificate/certificate_wait.html"
 const certImportPassword = "brother"
-
-func logBodySnippet(label string, body []byte) {
-	if len(body) == 0 {
-		return
-	}
-	if bytes.Contains(body, []byte("postError")) || bytes.Contains(body, []byte("errorMessage")) {
-		log.Printf("%s contains error marker", label)
-	}
-	head := len(body)
-	if head > 400 {
-		head = 400
-	}
-	tail := len(body)
-	if tail > 400 {
-		tail = 400
-	}
-
-	// if the body is short, just log once
-	if len(body) <= 800 {
-		log.Printf("%s body_snip=%q", label, string(body[:head]))
-		return
-	}
-
-	log.Printf("%s body_head=%q body_tail=%q", label, string(body[:head]), string(body[len(body)-tail:]))
-}
-
-func saveBody(label string, body []byte) {
-	if len(body) == 0 {
-		return
-	}
-	filename := fmt.Sprintf("/tmp/%s.html", strings.ReplaceAll(label, " ", "_"))
-	if err := os.WriteFile(filename, body, 0o600); err != nil {
-		log.Printf("%s failed to save body to %s: %v", label, filename, err)
-		return
-	}
-	log.Printf("%s saved body to %s", label, filename)
-}
 
 // UploadNewCert converts the specified pem files into p12 format and installs them
 // on the printer. It returns the id value of the newly installed cert.
@@ -75,8 +36,6 @@ func (p *printer) UploadNewCert(keyPem, certPem []byte) (string, error) {
 	for _, id := range origCertIDs {
 		if s, err := p.getCertIDSerial(id); err == nil {
 			origSerials[id] = hex.EncodeToString(s)
-		} else {
-			log.Printf("cert upload: warning: failed to read serial for id %s (%v)", id, err)
 		}
 	}
 
@@ -105,9 +64,6 @@ func (p *printer) UploadNewCert(keyPem, certPem []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Printf("cert upload GET import.html status=%d body_len=%d", resp.StatusCode, len(bodyBytes))
-	logBodySnippet("cert upload GET import.html", bodyBytes)
-	saveBody("cert_upload_get_import", bodyBytes)
 
 	// OK status?
 	if resp.StatusCode != http.StatusOK {
@@ -205,9 +161,6 @@ func (p *printer) UploadNewCert(keyPem, certPem []byte) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	log.Printf("cert upload POST multipart status=%d body_len=%d", resp.StatusCode, len(bodyBytes))
-	logBodySnippet("cert upload POST multipart", bodyBytes)
-	saveBody("cert_upload_post_multipart", bodyBytes)
 
 	// OK status?
 	if resp.StatusCode != http.StatusOK {
@@ -231,7 +184,6 @@ func (p *printer) UploadNewCert(keyPem, certPem []byte) (string, error) {
 
 	// try finalize to wait page first, then fallback to import.html if 404
 	finalizePaths := []string{urlCertImportWait, urlCertImport}
-	finalizeOK := false
 	for _, path := range finalizePaths {
 		u.Path = path
 
@@ -252,19 +204,10 @@ func (p *printer) UploadNewCert(keyPem, certPem []byte) (string, error) {
 		if err != nil {
 			return "", err
 		}
-		log.Printf("cert upload POST finalize (%s) status=%d body_len=%d", path, resp.StatusCode, len(bodyBytes))
-		logBodySnippet("cert upload POST finalize "+path, bodyBytes)
-		saveBody("cert_upload_post_finalize", bodyBytes)
 
 		if resp.StatusCode == http.StatusOK {
-			finalizeOK = true
 			break
 		}
-		log.Printf("cert upload finalize on %s returned status %d; trying fallback if available", path, resp.StatusCode)
-	}
-
-	if !finalizeOK {
-		log.Printf("cert upload: finalize requests did not return 200; proceeding to check cert list anyway")
 	}
 
 	// normally the webUI would show a waiting screen for ~7 seconds. insert
@@ -281,12 +224,8 @@ func (p *printer) UploadNewCert(keyPem, certPem []byte) (string, error) {
 	for _, id := range newCertIDs {
 		if s, err := p.getCertIDSerial(id); err == nil {
 			newSerials[id] = hex.EncodeToString(s)
-		} else {
-			log.Printf("cert upload: warning: failed to read serial for id %s (%v)", id, err)
 		}
 	}
-	log.Printf("cert upload: orig ids=%v new ids=%v", origCertIDs, newCertIDs)
-	log.Printf("cert upload: orig serials=%v new serials=%v", origSerials, newSerials)
 
 	// find ID that is in new list but not in old (this is the new one)
 	newId := ""
@@ -314,7 +253,6 @@ func (p *printer) UploadNewCert(keyPem, certPem []byte) (string, error) {
 			if oldSerial, ok := origSerials[id]; ok && oldSerial != serial {
 				newId = id
 				countNew = 1
-				log.Printf("cert upload: detected replaced cert at id %s (old serial %s -> new serial %s)", id, oldSerial, serial)
 				break
 			}
 		}

@@ -4,10 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"path"
 	"regexp"
 	"strings"
@@ -181,9 +179,6 @@ func (p *printer) SetActiveCert(id string) error {
 	if err != nil {
 		return err
 	}
-	_ = os.WriteFile("/tmp/http_settings_get.html", bodyBytes, 0o600)
-	log.Printf("http settings GET status=200 body_len=%d saved=/tmp/http_settings_get.html", len(bodyBytes))
-
 	actionPath, hidden := parseFormForID(bodyBytes, id, urlHttpCertServerSettings)
 	csrfToken, _ := hidden["CSRFToken"]
 	if csrfToken == "" {
@@ -241,12 +236,6 @@ func (p *printer) SetActiveCert(id string) error {
 	if err != nil {
 		return err
 	}
-	_ = os.WriteFile("/tmp/http_settings_post1.html", bodyBytes, 0o600)
-	log.Printf("http settings POST1 status=%d body_len=%d saved=/tmp/http_settings_post1.html", resp.StatusCode, len(bodyBytes))
-	if loc := resp.Header.Get("Location"); loc != "" {
-		log.Printf("http settings POST1 location=%s", loc)
-	}
-
 	// OK status?
 	if resp.StatusCode >= 400 {
 		return errors.New("printer: failed to post set active cert form")
@@ -257,8 +246,6 @@ func (p *printer) SetActiveCert(id string) error {
 	if err != nil {
 		return err
 	}
-	_ = os.WriteFile("/tmp/http_settings_post1_refresh.html", bodyBytes, 0o600)
-	log.Printf("http settings GET after POST1 body_len=%d saved=/tmp/http_settings_post1_refresh.html", len(bodyBytes))
 
 	actionPath, hidden = parseFormForID(bodyBytes, id, urlHttpCertServerSettings)
 	csrfToken, _ = hidden["CSRFToken"]
@@ -306,8 +293,6 @@ func (p *printer) SetActiveCert(id string) error {
 
 	// read body of response
 	bodyBytes, _ = io.ReadAll(resp.Body)
-	_ = os.WriteFile("/tmp/http_settings_post2.html", bodyBytes, 0o600)
-	log.Printf("http settings POST2 status=%d body_len=%d saved=/tmp/http_settings_post2.html", resp.StatusCode, len(bodyBytes))
 
 	// OK status?
 	if resp.StatusCode != http.StatusOK {
