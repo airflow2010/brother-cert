@@ -1,3 +1,5 @@
+--> **Archived** – unmaintained fork, replaced by a custom Python/Vault deployment script
+
 # Brother Cert
 
 Brother Cert is a command line tool to automatically install an ssl certificate on a brother printer.
